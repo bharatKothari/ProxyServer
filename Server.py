@@ -1,5 +1,5 @@
-import socket;
-import threading;
+import socket
+import threading
 
 class Server:
     def __init__(self):
