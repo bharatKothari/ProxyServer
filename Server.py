@@ -1,22 +1,34 @@
 import socket;
 import threading;
+import json;
 
 class Server:
     def __init__(self):
         self.serverSocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM) #using IPv4 addresses and TCP
-        self.serverSocket.bind(('127.0.0.1',7000))
+        self.serverSocket.bind(('192.168.43.192',7000))
         self.serverSocket.listen(10)
     
+    def isHostAllowed(self,conn,addr):
+        file = open("lists.json","r")
+        lists = json.load(file)
+        for client in lists["blocked_clients"]:
+            if(client == addr[0]):
+                return False
+        return True
+
     def connectToClient(self):
         print("Waiting for clients")
         while True:
             conn,client_addr = self.serverSocket.accept()
+            print(client_addr)
+            if(not self.isHostAllowed(conn,client_addr)):
+                conn.close()
+                continue
             clientThread = threading.Thread(target=self.handleClient,args=(conn,client_addr))
             clientThread.start()
 
     def handleClient(self,conn,client_addr):
         request = conn.recv(2048)
-        print(request)
         first_line=request.split(b'\n')[0]
         url = first_line.split(b' ')[1]
         (webserver,port) = self.getWebServerPort(url)
