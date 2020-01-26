@@ -1,11 +1,12 @@
 import socket
 import threading
 import json
+import ssl
 
 class Server:
     def __init__(self):
         self.serverSocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM) #using IPv4 addresses and TCP
-        self.serverSocket.bind(('192.168.43.192',7000))
+        self.serverSocket.bind(('127.0.0.1',7000))
         self.serverSocket.listen(10)
     
     def isHostAllowed(self,conn,addr):
@@ -29,10 +30,13 @@ class Server:
 
     def handleClient(self,conn,client_addr):
         request = conn.recv(2048)
+        print(request)
         first_line=request.split(b'\n')[0]
         url = first_line.split(b' ')[1]
         (webserver,port) = self.getWebServerPort(url)
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
+        context = ssl.create_default_context()
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s = context.wrap_socket(s, server_hostname=webserver, server_side=False, do_handshake_on_connect=True, suppress_ragged_eofs=True, session=None)
         s.connect((webserver, port))
         s.sendall(request)
         while 1:# receive data from web server
@@ -57,7 +61,7 @@ class Server:
         webserver = ""
         port = -1
         if (port_pos==-1 or webserver_pos < port_pos): 
-            port = 80   #default
+            port = 443 #default
             webserver = temp[:webserver_pos] 
         else: # specific port 
             port = int((temp[(port_pos+1):])[:webserver_pos-port_pos-1])
